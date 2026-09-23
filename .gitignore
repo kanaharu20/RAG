@@ -1,4 +1,7 @@
 docs/
 datasets_public/
 vllm-0.10.1/
+moulinette-ubuntu
+moulinette-fedora
+__pycache__/
 

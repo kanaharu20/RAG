@@ -1,6 +1,6 @@
 class Cli:
-    def index(self, max_chunk_size: int):
-
+    def index(self, max_chunk_size: int) -> None:
+        
     def search(self, query: str, k: int):
 
     def search_dataset(self, dataset_path: str, k: int, save_directory: str):

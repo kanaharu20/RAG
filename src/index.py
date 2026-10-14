@@ -8,6 +8,31 @@ import collections
 import math
 from sentence_transformers import SentenceTransformer
 import numpy as np
+from pydantic import BaseModel
+
+
+class Config(BaseModel):
+    chunk_num: int
+    vector_num: int
+    file_num: int
+    max_chunk_size: int
+    sub_py: int
+    sub_md_txt: int
+
+    @classmethod
+    def write_config_file(
+        cls, chunks: list[Chunk],
+        embedding_score: np.ndarray, file_num: int,
+        max_chunk_size: int
+            ) -> "Config":
+        chunk_num = len(chunks)
+        vector_num = embedding_score.shape[0]
+        return cls(
+            chunk_num=chunk_num, vector_num=vector_num,
+            file_num=file_num, max_chunk_size=max_chunk_size,
+            sub_py=1000, sub_md_txt=500
+            )
+
 
 class Index:
     def __init__(self, max_chunk_size: int):
@@ -174,7 +199,8 @@ class Index:
         chunks: list[Chunk],
         score_board: dict[str, list[tuple[int, float]]],
         start_points: list[int],
-        embedding_score: np.ndarray
+        embedding_score: np.ndarray,
+        config: "Config"
     ) -> None:
         process_dir = pathlib.Path("data/in_progress")
         shutil.rmtree(process_dir, ignore_errors=True)
@@ -183,6 +209,7 @@ class Index:
         score_board_file_path = process_dir / "score_board.json"
         start_points_file_path = process_dir / "start_points.npy"
         embedding_score_file_path = process_dir / "embed_score.npy"
+        config_file_path = process_dir / "configs.json"
         with open(chunks_file_path, "w", encoding="utf-8") as f:
             json.dump(
                 [chunk.model_dump() for chunk in chunks],
@@ -192,6 +219,11 @@ class Index:
             json.dump(
                 score_board,
                 f, ensure_ascii=False
+            )
+        with open(config_file_path, "w", encoding="utf-8") as f:
+            json.dump(
+                config.model_dump(),
+                f, ensure_ascii=False,
             )
         np_start_points = np.array(start_points)
         np.save(start_points_file_path, np_start_points)
@@ -222,5 +254,11 @@ class Index:
         small_window_list = self.open_small_window(chunks)
         start_points = self.make_startpoint_list(small_window_list)
         embedding_score = self.embed(small_window_list)
+        file_num = len({chunk.file_path for chunk in chunks})
+        config = Config.write_config_file(
+            chunks, embedding_score, file_num, self.chunker.chunk_size
+            )
 
-        self.save_files(chunks, score_board, start_points, embedding_score)
+        self.save_files(
+            chunks, score_board, start_points, embedding_score, config
+            )

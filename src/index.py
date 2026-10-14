@@ -6,12 +6,13 @@ import json
 import re
 import collections
 import math
-
+from sentence_transformers import SentenceTransformer
+import numpy as np
 
 class Index:
     def __init__(self, max_chunk_size: int):
         self.chunker = Chunker(chunk_size=max_chunk_size)
-
+        self.model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
     def split_chunks(self, chunks: list[Chunk]) -> list[list[str]]:
         split_chunks = []
         for chunk in chunks:
@@ -128,16 +129,60 @@ class Index:
         score_board = self.chunks_scores_by_word(bm25_scores)
         return score_board
 
+    @staticmethod
+    def open_small_window(chunks: list[Chunk]) -> list[list[str]]:
+        small_window_list: list[list[str]] = []
+        for chunk in chunks:
+            small_window: list[str] = []
+            if pathlib.Path(chunk.file_path).suffix == ".py":
+                window_size: int = 1000
+            else:
+                window_size = 500
+            if len(chunk.text) > window_size:
+                for i in range(0, len(chunk.text), window_size):
+                    chunk_text = chunk.file_path + "\n" + chunk.text[
+                        i:i + window_size
+                        ]
+                    small_window.append(chunk_text)
+            else:
+                small_window.append(chunk.file_path + "\n" + chunk.text)
+            small_window_list.append(small_window)
+        return small_window_list
+
+    @staticmethod
+    def make_startpoint_list(small_window_list: list[list[str]]) -> list[int]:
+        start_points: list[int] = []
+        current_point: int = 0
+        start_points.append(0)
+        for small_window in small_window_list:
+            current_point += len(small_window)
+            start_points.append(current_point)
+        return start_points
+
+    def embed(self, small_window_list: list[list[str]]) -> np.ndarray:
+        windows: list[str] = []
+        for wins in small_window_list:
+            for win in wins:
+                windows.append(win)
+        V = self.model.encode(
+            windows, normalize_embeddings=True, show_progress_bar=True
+            )
+        return V
+
+    @staticmethod
     def save_files(
-        self,
         chunks: list[Chunk],
-        score_board: dict[str, list[tuple[int, float]]]
+        score_board: dict[str, list[tuple[int, float]]],
+        start_points: list[int],
+        embedding_score: np.ndarray
     ) -> None:
         process_dir = pathlib.Path("data/in_progress")
         shutil.rmtree(process_dir, ignore_errors=True)
         process_dir.mkdir(parents=True, exist_ok=True)
         chunks_file_path = process_dir / "chunks.json"
         score_board_file_path = process_dir / "score_board.json"
+        start_points_file_path = process_dir / "start_points.npy"
+        embedding_score_file_path = process_dir / "embed_score.npy"
         with open(chunks_file_path, "w", encoding="utf-8") as f:
             json.dump(
                 [chunk.model_dump() for chunk in chunks],
@@ -148,6 +193,9 @@ class Index:
                 score_board,
                 f, ensure_ascii=False
             )
+        np_start_points = np.array(start_points)
+        np.save(start_points_file_path, np_start_points)
+        np.save(embedding_score_file_path, embedding_score)
         save_dir = pathlib.Path("data/processed")
         buckup_dir = pathlib.Path("data/backup")
         if save_dir.exists():
@@ -171,4 +219,8 @@ class Index:
                 if keep is not None:
                     chunks.extend(keep)
         score_board = self.make_score_board(chunks)
-        self.save_files(chunks, score_board)
+        small_window_list = self.open_small_window(chunks)
+        start_points = self.make_startpoint_list(small_window_list)
+        embedding_score = self.embed(small_window_list)
+
+        self.save_files(chunks, score_board, start_points, embedding_score)

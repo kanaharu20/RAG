@@ -38,6 +38,7 @@ class Index:
     def __init__(self, max_chunk_size: int):
         self.chunker = Chunker(chunk_size=max_chunk_size)
         self.model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
+
     def split_chunks(self, chunks: list[Chunk]) -> list[list[str]]:
         split_chunks = []
         for chunk in chunks:

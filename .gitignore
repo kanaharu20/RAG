@@ -4,4 +4,6 @@ vllm-0.10.1/
 moulinette-ubuntu
 moulinette-fedora
 __pycache__/
-
+data/processed
+data/backup
+data/in_progress

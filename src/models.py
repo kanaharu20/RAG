@@ -3,6 +3,15 @@ from typing import Annotated
 import uuid
 
 
+def check_not_blank(text: str) -> str:
+    if not text.strip():
+        raise ValueError("must not be empty or whitespace only")
+    return text
+
+
+NonBlankStr = Annotated[str, AfterValidator(check_not_blank)]
+
+
 class MinimalSource(BaseModel):
     file_path: str
     first_character_index: int
@@ -12,11 +21,11 @@ class MinimalSource(BaseModel):
 class UnansweredQuestion(BaseModel):
     question_id: str = Field(default_factory=lambda:
                              str(uuid.uuid4()))
-    question: str
+    question: NonBlankStr
 
 
 class AnsweredQuestion(UnansweredQuestion):
-    sources: list[MinimalSource]
+    sources: Annotated[list[MinimalSource], Field(min_length=1)]
     answer: str
 
 
@@ -44,18 +53,5 @@ class StudentSearchResultsAndAnswer(BaseModel):
     k: int
 
 
-def check_not_blank(text: str) -> str:
-    if not text.strip():
-        raise ValueError("must not be empty or whitespace only")
-    return text
-
-
-NonBlankStr = Annotated[str, AfterValidator(check_not_blank)]
-
-
-class CheckedQuestion(UnansweredQuestion):
-    question: NonBlankStr
-
-
 class CheckedDataset(BaseModel):
-    rag_questions: list[CheckedQuestion]
+    rag_questions: list[UnansweredQuestion]

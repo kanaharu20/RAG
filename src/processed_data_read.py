@@ -1,4 +1,5 @@
 from src.chunk import Chunk
+from src.error import IndexMismatchError, IndexNotFoundError
 import json
 import pathlib
 from src.index import Config
@@ -15,7 +16,10 @@ class ProcessedDataReader:
         elif self.backup_dir.exists():
             self.current_dir = self.backup_dir
         else:
-            raise IndexError  # これは仮置きです
+            raise IndexNotFoundError(
+                f"No index found in {self.processed_dir} or "
+                f"{self.backup_dir}. Run `python -m src index` first."
+            )
 
     def read_chunks(self) -> list[Chunk]:
         chunks: list[Chunk] = []
@@ -102,9 +106,9 @@ class ProcessedDataReader:
                 f"but chunks.json has only {chunk_num} chunks"
             )
         if problems:
-            raise ValueError(  # これは仮置きです
-                "index files do not match "
+            raise IndexMismatchError(
+                "Index files do not match each other "
                 f"(built with max_chunk_size={config.max_chunk_size}): "
                 + "; ".join(problems)
-                + ". Run the index command again."
+                + ". Run `python -m src index` again."
             )

@@ -1,9 +1,9 @@
 import shutil
 
 from src.chunk import Chunker, Chunk
+from src.tokenizer import tokenize
 import pathlib
 import json
-import re
 import collections
 import math
 from sentence_transformers import SentenceTransformer
@@ -38,35 +38,6 @@ class Index:
     def __init__(self, max_chunk_size: int):
         self.chunker = Chunker(chunk_size=max_chunk_size)
         self.model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
-
-    def split_chunks(self, chunks: list[Chunk]) -> list[list[str]]:
-        split_chunks = []
-        for chunk in chunks:
-            split_content = re.findall(
-                r"[a-zA-Z0-9_]+", chunk.text
-            )
-            split_chunks.append(split_content)
-        return split_chunks
-
-    def trim_chunks(self, words: list[list[str]]) -> list[list[str]]:
-        trimmed_chunks: list[list[str]] = []
-        for word_list in words:
-            keep_words: list[str] = []
-            for word in word_list:
-                parts = re.findall(
-                    r"[A-Z]+(?=[A-Z][a-z])|[A-Z]?[a-z]+|[A-Z]+|\d+", word)
-                keep_words.extend(parts)
-                if len(parts) > 1:
-                    keep_words.append(word)
-            trimmed_chunks.append(keep_words)
-        return trimmed_chunks
-
-    def lower_case_chunks(self, words: list[list[str]]) -> list[list[str]]:
-        lower_case_chunks = []
-        for word_list in words:
-            lower_case_list = [word.lower() for word in word_list]
-            lower_case_chunks.append(lower_case_list)
-        return lower_case_chunks
 
     def count_words_in_chunks(
             self, arranged_chunks: list[list[str]]
@@ -140,11 +111,9 @@ class Index:
         return word_to_chunk_scores
 
     def make_score_board(self, chunks: list[Chunk]) -> dict[str, list[tuple[int, float]]]:
-        arranged_chunks = self.split_chunks(chunks)
-        trimmed_chunks = self.trim_chunks(arranged_chunks)
-        lower_case_chunks = self.lower_case_chunks(trimmed_chunks)
-        word_counts = self.count_words_in_chunks(lower_case_chunks)
-        dl_list = self.calculate_dl(lower_case_chunks)
+        tokenized_chunks = [tokenize(chunk.text) for chunk in chunks]
+        word_counts = self.count_words_in_chunks(tokenized_chunks)
+        dl_list = self.calculate_dl(tokenized_chunks)
         N = self.calculate_N(chunks)
         df_dict = self.calculate_df(word_counts)
         idf_dict = self.calculate_idf(df_dict, N)

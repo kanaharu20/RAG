@@ -8,3 +8,7 @@ class IndexNotFoundError(RagError):
 
 class IndexMismatchError(RagError):
     pass
+
+
+class InvalidResultsError(RagError):
+    pass

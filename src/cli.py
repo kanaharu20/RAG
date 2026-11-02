@@ -5,6 +5,7 @@ from pydantic import Field, validate_call
 from tqdm import tqdm
 
 from src import index
+from src.evaluate import Evaluate
 from src.models import (
     CheckedDataset, MinimalSearchResults, MinimalSource, NonBlankStr,
     StudentSearchResults
@@ -70,5 +71,14 @@ class Cli:
             ):
         ...
 
-    def evaluate(self, student_search_results_path: str, dataset_path: str):
-        ...
+    @validate_call(config={"strict": True})
+    def evaluate(
+        self, student_search_results_path: str, dataset_path: str,
+        k: PositiveInt = 5
+    ) -> None:
+        evaluator = Evaluate(student_search_results_path, dataset_path)
+        recall = evaluator.recall(k)
+        print(
+            f"recall@{k}: {recall * 100:.1f}% "
+            f"({len(evaluator.dataset.rag_questions)} questions)"
+        )

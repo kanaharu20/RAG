@@ -55,3 +55,7 @@ class StudentSearchResultsAndAnswer(BaseModel):
 
 class CheckedDataset(BaseModel):
     rag_questions: list[UnansweredQuestion]
+
+
+class AnsweredDataset(BaseModel):
+    rag_questions: list[AnsweredQuestion]

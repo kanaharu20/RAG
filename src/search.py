@@ -3,16 +3,23 @@ from src.processed_data_read import ProcessedDataReader
 from src.tokenizer import tokenize
 from sentence_transformers import SentenceTransformer
 import numpy as np
+from tqdm import tqdm
 
 
 class Search:
     def __init__(self) -> None:
         reader = ProcessedDataReader()
-        self.chunks = reader.read_chunks()
-        config = reader.read_config()
-        self.score_board = reader.read_score_board()
-        self.start_points = reader.read_start_points()
-        self.embed_score = reader.read_embed_score()
+        with tqdm(total=5, desc="Loading index") as progress:
+            self.chunks = reader.read_chunks()
+            progress.update()
+            config = reader.read_config()
+            progress.update()
+            self.score_board = reader.read_score_board()
+            progress.update()
+            self.start_points = reader.read_start_points()
+            progress.update()
+            self.embed_score = reader.read_embed_score()
+            progress.update()
         reader.check_consistency(
             self.chunks, config, self.score_board,
             self.start_points, self.embed_score

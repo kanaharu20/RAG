@@ -10,7 +10,8 @@ from src.error import RagError
 def format_validation_error(error: ValidationError) -> str:
     messages: list[str] = []
     for detail in error.errors():
-        message = f"{detail['msg']} (input: {detail['input']!r})"
+        reason = detail["msg"].removeprefix("Value error, ")
+        message = f"{reason} (input: {detail['input']!r})"
         location = ".".join(str(part) for part in detail["loc"])
         if any(isinstance(part, str) for part in detail["loc"]):
             message = f"{location}: {message}"

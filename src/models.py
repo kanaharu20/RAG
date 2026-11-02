@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
+from typing import Annotated
 import uuid
 
 
@@ -42,3 +43,19 @@ class StudentSearchResultsAndAnswer(BaseModel):
     search_results: list[MinimalAnswer]
     k: int
 
+
+def check_not_blank(text: str) -> str:
+    if not text.strip():
+        raise ValueError("must not be empty or whitespace only")
+    return text
+
+
+NonBlankStr = Annotated[str, AfterValidator(check_not_blank)]
+
+
+class CheckedQuestion(UnansweredQuestion):
+    question: NonBlankStr
+
+
+class CheckedDataset(BaseModel):
+    rag_questions: list[CheckedQuestion]
